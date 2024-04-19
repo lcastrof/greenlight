@@ -27,8 +27,12 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 // http.ResponseWriter, the HTTP status code to send, the data to encode to JSON, and a
 // header map containing any additional HTTP headers we want to include in the response.
 func (app *application) writeJSON(w http.ResponseWriter, status int, data interface{}, headers http.Header) error {
-	// Encode the data to JSON, returning the error if there was one.
-	js, err := json.Marshal(data)
+	// Use the json.MarshalIndent() function so that the whitespace is added to the encoded
+	// JSON. Here we use no line prefix ("") and tab indents("\t") for each element.
+	// This costs considerably more than Marshal itself, so if the app runs on a
+	// very strict env or there are lots of requests per second, it should be better
+	// sticking with Marshal
+	js, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {
 		return err
 	}

@@ -3,9 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -29,7 +28,7 @@ type config struct {
 // struct and a logger, but it will grow to include a lot more as our build progresses.
 type application struct {
 	config config
-	logger *log.Logger
+	logger *slog.Logger
 }
 
 func main() {
@@ -39,7 +38,7 @@ func main() {
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development |staging|production)")
 	flag.Parse()
 
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := slog.Default()
 
 	app := &application{
 		config: cfg,
@@ -54,7 +53,7 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger.Printf("Starting %s server on %s", cfg.env, srv.Addr)
+	logger.Info(fmt.Sprintf("Starting %s server on %s", cfg.env, srv.Addr))
 	err := srv.ListenAndServe()
-	logger.Fatal(err)
+	logger.Error(err.Error())
 }

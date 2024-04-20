@@ -15,13 +15,11 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
-		http.NotFound(w, r)
+		// Use the new notFoundResponse() helper
+		app.notFoundResponse(w, r)
 		return
 	}
 
-	// Create a new instance of the Movie struct, containing the ID we extracted from
-	// the URL and some dummy data. Also notice that we deliberately haven't set a
-	// value for the Year field.
 	movie := data.Movie{
 		ID:        id,
 		CreatedAt: time.Now(),
@@ -31,10 +29,9 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 		Version:   1,
 	}
 
-	// Encode the struct to JSON and send it as the HTTP response.
 	err = app.writeJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
 	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "The server encountered a problem and could not proccess your request", http.StatusInternalServerError)
+		// Use tje new serverErrorResponse() helper
+		app.serverErrorResponse(w, r, err)
 	}
 }

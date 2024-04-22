@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/lcastrof/greenlight/internal/validator"
@@ -57,4 +58,53 @@ func (m MovieModel) Update(movie *Movie) error {
 // Add a placeholder method for deleting a specific record from the movies table.
 func (m MovieModel) Delete(id int64) error {
 	return nil
+}
+
+type MockMovieModel struct {
+	DB *[]Movie
+}
+
+func (m MockMovieModel) Insert(movie *Movie) error {
+	// Mock the action...
+	for _, mov := range *m.DB {
+		if mov.ID == movie.ID {
+			return errors.New("Movie already inserted")
+		}
+	}
+
+	*m.DB = append(*m.DB, *movie)
+	return nil
+}
+
+func (m MockMovieModel) Get(id int64) (*Movie, error) {
+	// Mock the action...
+	for _, mov := range *m.DB {
+		if mov.ID == id {
+			return &mov, nil
+		}
+	}
+
+	return nil, errors.New("Movie not found")
+}
+
+func (m MockMovieModel) Update(movie *Movie) error {
+	// Mock the action...
+	for index, mov := range *m.DB {
+		if mov.ID == movie.ID {
+			(*m.DB)[index] = *movie
+		}
+	}
+
+	return errors.New("Movie not found")
+}
+
+func (m MockMovieModel) Delete(id int64) error {
+	// Mock the action...
+	for index, mov := range *m.DB {
+		if mov.ID == id {
+			*m.DB = append((*m.DB)[index:], (*m.DB)[index+1:]...)
+		}
+	}
+
+	return errors.New("Movie not found")
 }

@@ -96,7 +96,6 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Retrieve the movie record as normal.
 	movie, err := app.models.Movies.Get(id)
 	if err != nil {
 		switch {
@@ -108,7 +107,6 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Use pointers for the Title, Year and Runtime fields.
 	var input struct {
 		Title   *string       `json:"title"`
 		Year    *int32        `json:"year"`
@@ -116,24 +114,16 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		Genres  []string      `json:"genres"`
 	}
 
-	// Decode the JSON as normal.
 	err = app.readJSON(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
 
-	// If the input.Title value is nil then we know that no corresponding "title" key/
-	// value pair was provided in the JSON request body. So we move on and leave the
-	// movie record unchanged. Otherwise, we update the movie record with the new title
-	// value. Importantly, because input.Title is a now a pointer to a string, we need
-	// to dereference the pointer using the * operator to get the underlying value
-	// before assigning it to our movie record.
 	if input.Title != nil {
 		movie.Title = *input.Title
 	}
 
-	// We also do the same for the other fields in the input struct.
 	if input.Year != nil {
 		movie.Year = *input.Year
 	}
@@ -151,9 +141,16 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Intercept any ErrEditConflict error and call the new editConflictResponse()
+	// helper.
 	err = app.models.Movies.Update(movie)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			app.editConflictResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 		return
 	}
 

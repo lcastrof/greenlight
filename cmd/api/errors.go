@@ -8,7 +8,7 @@ import (
 // The logError() method is a generic helper for logging an error message. Later in the
 // book we'll upgrade this to use structured logging, and record additional information
 // about the request including the HTTP method and URL.
-func (app *application) logError(r *http.Request, err error) {
+func (app *application) logError(_ *http.Request, err error) {
 	app.logger.Error(err.Error())
 }
 
@@ -62,4 +62,9 @@ func (app *application) badRequestResponse(w http.ResponseWriter, r *http.Reques
 // the same as the errors map contained in our Validator type.
 func (app *application) failedValidationResponse(w http.ResponseWriter, r *http.Request, errors map[string]string) {
 	app.errorResponse(w, r, http.StatusUnprocessableEntity, errors)
+}
+
+func (app *application) editConflictResponse(w http.ResponseWriter, r *http.Request) {
+	message := "unable to update the record due to an edit conflict, please try again"
+	app.errorResponse(w, r, http.StatusConflict, message)
 }

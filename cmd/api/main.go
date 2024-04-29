@@ -81,7 +81,6 @@ func main() {
 	if err != nil {
 		logger.Error(err.Error())
 	}
-	logger.Error(err.Error())
 }
 
 func openDB(cfg config) (*sql.DB, error) {

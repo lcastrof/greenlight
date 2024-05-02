@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/lcastrof/greenlight/internal/data"
 	"github.com/lcastrof/greenlight/internal/validator"
@@ -50,13 +51,9 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Insert the user data into the database.
 	err = app.models.Users.Insert(user)
 	if err != nil {
 		switch {
-		// If we get a ErrDuplicateEmail error, use the v.AddError() method to manually
-		// add a message to the validator instance, and then call our
-		// failedValidationResponse() helper.
 		case errors.Is(err, data.ErrDuplicateEmail):
 			v.AddError("email", "a user with this email address already exists")
 			app.failedValidationResponse(w, r, v.Errors)
@@ -66,10 +63,26 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Launch a background goroutine to send the welcome email.
+	// After the user record has been created in the database, generate a new activation
+	// token for the user.
+	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
 	app.background(func() {
-		// Send the welcome email.
-		err = app.mailer.Send(user.Email, "user_welcome.tmpl.html", user)
+		// As there are now multiple pieces of data that we want to pass to our email
+		// templates, we create a map to act as a 'holding structure' for the data. This
+		// contains the plaintext version of the activation token for the user, along
+		// with their ID.
+		data := map[string]interface{}{
+			"activationToken": token.Plaintext,
+			"userID":          user.ID,
+		}
+
+		// Send the welcome email, passing in the map above as dynamic data.
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl.html", data)
 		if err != nil {
 			app.logger.Error(err.Error())
 		}

@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"database/sql"
+	"expvar"
 	"flag"
 	"log/slog"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +19,6 @@ import (
 
 const version = "1.0.0"
 
-// Update the config struct to hold the SMTP server settings.
 type config struct {
 	port int
 	env  string
@@ -39,15 +40,11 @@ type config struct {
 		password string
 		sender   string
 	}
-	// Add a cors struct and trustedOrigins field with the type []string.
 	cors struct {
 		trustedOrigins []string
 	}
 }
 
-// Include a sync.WaitGroup in the application struct. The zero-value for a
-// sync.WaitGroup type is a valid, useable, sync.WaitGroup with a 'counter' value of 0,
-// so we don't need to do anything else to initialize it before we can use it.
 type application struct {
 	config config
 	logger *slog.Logger
@@ -78,12 +75,6 @@ func main() {
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "", "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.alexedwards.net>", "SMTP sender")
 
-	// Use the flag.Func() function to process the -cors-trusted-origins command line
-	// flag. In this we use the strings.Fields() function to split the flag value into a
-	// slice based on whitespace characters and assign it to our config struct.
-	// Importantly, if the -cors-trusted-origins flag is not present, contains the empty
-	// string, or contains only whitespace, then strings.Fields() will return an empty
-	// []string slice.
 	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(val string) error {
 		cfg.cors.trustedOrigins = strings.Fields(val)
 		return nil
@@ -102,12 +93,32 @@ func main() {
 
 	logger.Info("database connection pool established")
 
+	// Publish a new "version" variable in the expvar handler containing our application
+	// version number (currently the constant "1.0.0").
+	expvar.NewString("version").Set(version)
+
+	// Publish the number of active goroutines.
+	expvar.Publish("goroutines", expvar.Func(func() interface{} {
+		return runtime.NumGoroutine()
+	}))
+
+	// Publish the database connection pool statistics.
+	expvar.Publish("database", expvar.Func(func() interface{} {
+		return db.Stats()
+	}))
+
+	// Publish the current Unix timestamp.
+	expvar.Publish("timestamp", expvar.Func(func() interface{} {
+		return time.Now().Unix()
+	}))
+
 	app := &application{
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
 		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
+
 	err = app.serve()
 	if err != nil {
 		logger.Error(err.Error())

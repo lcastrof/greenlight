@@ -225,7 +225,6 @@ func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 	// Remember that this returns a byte *array* with length 32, not a slice.
 	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
 
-	// Set up the SQL query.
 	query := `
         SELECT users.id, users.created_at, users.name, users.email, users.password_hash, users.activated, users.version
         FROM users

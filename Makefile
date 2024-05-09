@@ -22,7 +22,7 @@ confirm:
 ## run/api: run the cmd/api application
 .PHONY: run/api
 run/api:
-	@go run ./cmd/api -db-dsn=${GREENLIGHT_DB_DSN}
+	@go run ./cmd/api -db-dsn=${GREENLIGHT_DB_DSN} -smtp-username=43bc7bedade197 -smtp-password=8b0885e3b33595 
 
 ## docker/up: start the docker containers
 .PHONY: docker/up
